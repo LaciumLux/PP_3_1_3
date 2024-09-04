@@ -1,7 +1,6 @@
 package ru.kata.spring.boot_security.demo.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -13,11 +12,12 @@ import ru.kata.spring.boot_security.demo.services.UserServiceImpl;
 
 import javax.validation.Valid;
 import java.security.Principal;
+import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
 
 @Controller
-@RequestMapping("/")
+@RequestMapping("/admin")
 public class AdminController {
     private final UserServiceImpl userService;
     private final RoleServiceImpl roleService;
@@ -28,7 +28,7 @@ public class AdminController {
         this.roleService = roleService;
     }
 
-    @GetMapping("/admin")
+    @GetMapping()
     public String showAllUsers(@ModelAttribute("newUser") User user, Principal principal, Model model) {
         model.addAttribute("admin", userService.getUserByUsername(principal.getName()));
         model.addAttribute("allRoles", roleService.getAllRoles());
@@ -38,10 +38,10 @@ public class AdminController {
     }
 
 
-    @PostMapping("/admin")
+    @PostMapping()
     public String saveNewUser(@ModelAttribute("newUser") @Valid User user, BindingResult bindingResult,
                               Principal principal, Model model,
-                              @RequestParam(name = "roles", required = true) List<Long> roleIds) {
+                              @RequestParam(name = "roles", required = false) List<Long> roleIds) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("admin", userService.getUserByUsername(principal.getName()));
             model.addAttribute("allRoles", roleService.getAllRoles());
@@ -49,16 +49,20 @@ public class AdminController {
             model.addAttribute("activeTable", "addUser");
             return "admin";
         }
-        List<Role> roles = new ArrayList<>();
-        for (Long roleId : roleIds) {
-            roles.add(roleService.getRoleById(roleId));
+        Collection<Role> roles = new ArrayList<>();
+        if (roleIds == null) {
+            user.setRoles(null);
+        } else {
+            for (Long roleId : roleIds) {
+                roles.add(roleService.getRoleById(roleId));
+            }
+            user.setRoles(roles);
         }
-        user.setRoles(roles);
         userService.saveUser(user);
         return "redirect:/admin";
     }
 
-    @PatchMapping("/admin")
+    @PatchMapping()
     public String edit(@ModelAttribute("user") @Valid User user, BindingResult bindingResult,
                        Model model, Principal principal) {
 
@@ -71,7 +75,7 @@ public class AdminController {
         return "redirect:/admin";
     }
 
-    @DeleteMapping("/admin")
+    @DeleteMapping()
     public String delete(@RequestParam("id") Long id) {
         userService.deleteUserById(id);
         return "redirect:/admin";
